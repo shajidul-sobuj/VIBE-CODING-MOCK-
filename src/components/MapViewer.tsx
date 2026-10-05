@@ -12,16 +12,16 @@ interface MapViewerProps {
   hazardMode: boolean;
 }
 
-export function MapViewer({
-  building,
-  currentState,
-  route,
-  startNode,
-  onNodeClick,
+export function MapViewer({ 
+  building, 
+  currentState, 
+  route, 
+  startNode, 
+  onNodeClick, 
   onEdgeClick,
   hazardMode
 }: MapViewerProps) {
-
+  
   const { minX, minY, maxX, maxY } = useMemo(() => {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     building.nodes.forEach(n => {
@@ -36,20 +36,22 @@ export function MapViewer({
   const width = Math.max(maxX - minX, 100);
   const height = Math.max(maxY - minY, 100);
 
-  const isEdgeInRoute = (from: string, to: string) => {
-    if (!route || route.error || route.path.length < 2) return false;
+  const getEdgeRouteDirection = (from: string, to: string) => {
+    if (!route || route.error || route.path.length < 2) return null;
     for (let i = 0; i < route.path.length - 1; i++) {
-      if ((route.path[i] === from && route.path[i+1] === to) ||
-          (route.path[i] === to && route.path[i+1] === from)) {
-        return true;
+      if (route.path[i] === from && route.path[i+1] === to) {
+        return 1; // forward
+      }
+      if (route.path[i] === to && route.path[i+1] === from) {
+        return -1; // backward
       }
     }
-    return false;
+    return null;
   };
 
   return (
-    <svg
-      viewBox={`${minX} ${minY} ${width} ${height}`}
+    <svg 
+      viewBox={`${minX} ${minY} ${width} ${height}`} 
       className="w-full h-full select-none"
     >
       <defs>
@@ -65,18 +67,28 @@ export function MapViewer({
           const toNode = building.nodes.find(n => n.id === edge.to);
           if (!fromNode || !toNode) return null;
 
-          const isBlocked = currentState.blocked_edges.includes(edge.id) ||
-                            currentState.blocked_nodes.includes(edge.from) ||
-                            currentState.blocked_nodes.includes(edge.to);
+          const isExplicitlyBlocked = currentState.blocked_edges.includes(edge.id);
+          const isNodeBlocked = currentState.blocked_nodes.includes(edge.from) || currentState.blocked_nodes.includes(edge.to);
+
+          let strokeColor = '#cbd5e1';
+          let strokeDash = 'none';
+
+          if (isExplicitlyBlocked) {
+            strokeColor = '#fca5a5';
+            strokeDash = '8,8';
+          } else if (isNodeBlocked) {
+            strokeColor = '#e2e8f0'; 
+            strokeDash = '4,4';
+          }
 
           return (
-            <line
+            <line 
               key={`static-${edge.id}`}
-              x1={fromNode.x} y1={fromNode.y}
-              x2={toNode.x} y2={toNode.y}
-              stroke={isBlocked ? '#fca5a5' : '#cbd5e1'}
+              x1={fromNode.x} y1={fromNode.y} 
+              x2={toNode.x} y2={toNode.y} 
+              stroke={strokeColor} 
               strokeWidth="4"
-              strokeDasharray={isBlocked ? "8,8" : "none"}
+              strokeDasharray={strokeDash}
               className="transition-all duration-300 ease-out"
             />
           );
@@ -90,15 +102,21 @@ export function MapViewer({
           const toNode = building.nodes.find(n => n.id === edge.to);
           if (!fromNode || !toNode) return null;
 
-          const isRoute = isEdgeInRoute(edge.from, edge.to);
-          if (!isRoute) return null;
+          const routeDir = getEdgeRouteDirection(edge.from, edge.to);
+          if (!routeDir) return null;
+
+          // Draw explicitly in the direction of travel for perfect animation
+          const startX = routeDir === 1 ? fromNode.x : toNode.x;
+          const startY = routeDir === 1 ? fromNode.y : toNode.y;
+          const endX = routeDir === 1 ? toNode.x : fromNode.x;
+          const endY = routeDir === 1 ? toNode.y : fromNode.y;
 
           return (
-            <line
+            <line 
               key={`route-${edge.id}`}
-              x1={fromNode.x} y1={fromNode.y}
-              x2={toNode.x} y2={toNode.y}
-              stroke="#3b82f6"
+              x1={startX} y1={startY} 
+              x2={endX} y2={endY} 
+              stroke="#3b82f6" 
               strokeWidth="6"
               className="animate-draw-line"
             />
@@ -113,32 +131,48 @@ export function MapViewer({
           const toNode = building.nodes.find(n => n.id === edge.to);
           if (!fromNode || !toNode) return null;
 
-          const isBlocked = currentState.blocked_edges.includes(edge.id) ||
-                            currentState.blocked_nodes.includes(edge.from) ||
-                            currentState.blocked_nodes.includes(edge.to);
-
+          const isExplicitlyBlocked = currentState.blocked_edges.includes(edge.id);
+          const isNodeBlocked = currentState.blocked_nodes.includes(edge.from) || currentState.blocked_nodes.includes(edge.to);
+          
           const cx = (fromNode.x + toNode.x) / 2;
           const cy = (fromNode.y + toNode.y) / 2;
 
+          const canToggle = hazardMode && !isNodeBlocked;
+
+          let circleFill = '#ffffff';
+          let circleStroke = '#cbd5e1';
+          let textFill = '#64748b';
+
+          if (isExplicitlyBlocked) {
+            circleFill = '#fef2f2';
+            circleStroke = '#fca5a5';
+            textFill = '#ef4444';
+          } else if (isNodeBlocked) {
+            circleFill = '#f8fafc';
+            circleStroke = '#e2e8f0';
+            textFill = '#cbd5e1';
+          }
+
           return (
-            <g key={`label-${edge.id}`}
-               onClick={() => onEdgeClick(edge.id)}
-               className={cn("transition-opacity duration-200", hazardMode ? "cursor-pointer hover:opacity-70" : "")}
+            <g key={`label-${edge.id}`} 
+               onClick={() => { if (canToggle) onEdgeClick(edge.id); }}
+               className={cn("transition-opacity duration-200", canToggle ? "cursor-pointer hover:opacity-70" : "")}
             >
               {/* Hit area for clicking */}
-              <line
-                x1={fromNode.x} y1={fromNode.y}
-                x2={toNode.x} y2={toNode.y}
-                stroke="transparent" strokeWidth="24"
+              <line 
+                x1={fromNode.x} y1={fromNode.y} 
+                x2={toNode.x} y2={toNode.y} 
+                stroke="transparent" strokeWidth="24" 
+                className={canToggle ? "" : "pointer-events-none"}
               />
 
               <g transform={`translate(${cx}, ${cy})`} className="transition-transform duration-300">
-                <circle r="12" fill={isBlocked ? '#fef2f2' : '#ffffff'} stroke={isBlocked ? '#fca5a5' : '#cbd5e1'} strokeWidth="2" className="transition-colors duration-300" />
-                <text textAnchor="middle" dy=".3em" fontSize="12" fontWeight="bold" fill={isBlocked ? '#ef4444' : '#64748b'} className="transition-colors duration-300">
+                <circle r="12" fill={circleFill} stroke={circleStroke} strokeWidth="2" className="transition-colors duration-300" />
+                <text textAnchor="middle" dy=".3em" fontSize="12" fontWeight="bold" fill={textFill} className="transition-colors duration-300">
                   {edge.cost}
                 </text>
-
-                {isBlocked && (
+                
+                {isExplicitlyBlocked && (
                   <g className="scale-150 animate-pop-in">
                     <line x1="-5" y1="-5" x2="5" y2="5" stroke="#ef4444" strokeWidth="1.5" />
                     <line x1="-5" y1="5" x2="5" y2="-5" stroke="#ef4444" strokeWidth="1.5" />
@@ -156,7 +190,7 @@ export function MapViewer({
           const isBlocked = currentState.blocked_nodes.includes(node.id);
           const isClosed = currentState.closed_exits.includes(node.id);
           const isUnusable = isBlocked || isClosed;
-
+          
           const isStart = startNode === node.id;
           const isEnd = route?.exitId === node.id && !route.error;
           const isInPath = route?.path.includes(node.id);
@@ -183,29 +217,31 @@ export function MapViewer({
           }
 
           return (
-            <g
-              key={`node-${node.id}`}
+            <g 
+              key={`node-${node.id}`} 
               transform={`translate(${node.x}, ${node.y})`}
             >
-              <g
+              <g 
                 onClick={() => onNodeClick(node.id)}
                 className={cn(
-                  "cursor-pointer transition-transform duration-200 ease-out",
-                  hazardMode ? "hover:scale-110" : "hover:brightness-95"
+                  "cursor-pointer transition-all duration-200 ease-out",
+                  hazardMode ? "hover:scale-[1.04] hover:drop-shadow-md" : "hover:brightness-95",
+                  isStart ? "animate-start-node" : "",
+                  isUnusable ? "animate-subtle-glow" : ""
                 )}
               >
                 {isStart && (
-                  <circle key={`ring-${startNode}`} r="20" fill="none" stroke="#2563eb" className="animate-selection-ring" />
+                  <circle key={`ring-${startNode}`} r="24" fill="none" stroke="#2563eb" strokeWidth="1.5" className="opacity-40 transition-opacity duration-300" />
                 )}
-
-                <circle
-                  r="20"
-                  fill={fillColor}
-                  stroke={strokeColor}
-                  strokeWidth={isInPath || isStart || isEnd ? "4" : "3"}
+                
+                <circle 
+                  r="20" 
+                  fill={fillColor} 
+                  stroke={strokeColor} 
+                  strokeWidth={isInPath || isStart || isEnd ? "4" : "3"} 
                   className="transition-colors duration-300"
                 />
-
+                
                 <text textAnchor="middle" dy=".3em" fontSize="12" fontWeight="bold" fill="#334155">
                   {node.id}
                 </text>
