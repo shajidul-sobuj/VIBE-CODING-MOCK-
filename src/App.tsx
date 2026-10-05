@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BuildingData, InitialState, RouteResult } from './types';
 import { calculateRoute } from './utils/dijkstra';
+import { validateBuildingData } from './utils/validation';
 import enTranslations from './locales/en.json';
 import bnTranslations from './locales/bn.json';
 import { MapViewer } from './components/MapViewer';
@@ -27,14 +28,18 @@ function App() {
   useEffect(() => {
     fetch('/building.json')
       .then(res => res.json())
-      .then((data: BuildingData) => {
-        setBuilding(data);
+      .then((data) => {
+        const error = validateBuildingData(data);
+        if (error) {
+          console.error("Default building.json validation failed:", error);
+          return;
+        }
+        setBuilding(data as BuildingData);
         setCurrentState(JSON.parse(JSON.stringify(data.initial_state)));
       })
       .catch(err => console.error("Failed to load default building", err));
   }, []);
 
-  // Calculate route immutably on state change
   useEffect(() => {
     if (building && startNode) {
       const result = calculateRoute(building, startNode, currentState);
@@ -48,6 +53,7 @@ function App() {
     if (building) {
       setCurrentState(JSON.parse(JSON.stringify(building.initial_state)));
       setStartNode(null);
+      // Route is cleared via useEffect when startNode becomes null
     }
   };
 
@@ -58,10 +64,20 @@ function App() {
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        const data = JSON.parse(event.target?.result as string) as BuildingData;
+        const parsed = JSON.parse(event.target?.result as string);
+        const errorMsg = validateBuildingData(parsed);
+        
+        if (errorMsg) {
+          alert(`Validation Error: ${errorMsg}`);
+          return;
+        }
+        
+        const data = parsed as BuildingData;
         setBuilding(data);
         setCurrentState(JSON.parse(JSON.stringify(data.initial_state)));
         setStartNode(null);
+        setRoute(null);
+        setHazardMode(false); // Clean UX reset on new file
       } catch (err) {
         alert("Invalid JSON format");
       }
@@ -75,7 +91,6 @@ function App() {
     const node = building.nodes.find(n => n.id === nodeId);
     if (!node) return;
     
-    // Fully immutable state update
     setCurrentState(prev => {
       if (node.type === 'exit') {
         return {
@@ -96,7 +111,6 @@ function App() {
   };
 
   const toggleEdgeHazard = (edgeId: string) => {
-    // Fully immutable state update
     setCurrentState(prev => ({
       ...prev,
       blocked_edges: prev.blocked_edges.includes(edgeId)
@@ -113,7 +127,6 @@ function App() {
     if (hazardMode) {
       toggleNodeHazard(nodeId);
     } else {
-      // Exits cannot be selected as start
       if (node.type !== 'exit') {
         setStartNode(nodeId);
       }
@@ -190,7 +203,7 @@ function App() {
                 {t.statusSelectStart}
               </div>
             ) : route ? (
-              <div key={route.error || route.path.join('')} className="animate-pop-in space-y-4">
+              <div key={route.error || route.path.join('')} className="animate-fade-slide space-y-4">
                 {route.error ? (
                   <div className="bg-red-50 text-red-900 p-4 rounded-lg border border-red-200">
                     <div className="font-bold flex items-center gap-2 mb-1">
