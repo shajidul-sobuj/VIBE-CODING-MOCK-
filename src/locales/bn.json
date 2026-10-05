@@ -1,0 +1,22 @@
+{
+  "title": "স্মার্ট এস্কেপ",
+  "subtitle": "ইন্টারঅ্যাক্টিভ ইভাকুয়েশন রুট সিমুলেটর",
+  "uploadLabel": "ম্যাপ আপলোড করুন (JSON)",
+  "resetBtn": "রিসেট ম্যাপ",
+  "langToggle": "English",
+  "instructions": "শুরুর স্থান হিসেবে একটি আনব্লকড রুম বা জাংশন নির্বাচন করুন। হ্যাজার্ড স্ট্যাটাস (ব্লক/আনব্লক) টগল করতে নোড বা এজে ক্লিক করুন।",
+  "routeCost": "খরচ",
+  "exitReached": "এক্সিট পাওয়া গেছে",
+  "path": "পথ",
+  "errorStartBlocked": "Starting location blocked",
+  "errorNoRoute": "No route available",
+  "statusSelectStart": "একটি শুরুর স্থান নির্বাচন করুন।",
+  "nodeTypes": {
+    "room": "রুম",
+    "junction": "জাংশন",
+    "exit": "এক্সিট"
+  },
+  "hazardMode": "হ্যাজার্ড টগল মোড",
+  "hazardModeOn": "চালু",
+  "hazardModeOff": "বন্ধ"
+}
