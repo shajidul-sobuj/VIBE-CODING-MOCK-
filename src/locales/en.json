@@ -1,22 +1,26 @@
 {
   "title": "Smart Escape",
   "subtitle": "Interactive Evacuation Route Simulator",
-  "uploadLabel": "Upload Map (JSON)",
+  "uploadLabel": "Upload Map",
   "resetBtn": "Reset Map",
   "langToggle": "বাংলা",
-  "instructions": "Select an unblocked room or junction as the starting point. Click on nodes or edges to toggle hazard status (block/unblock).",
-  "routeCost": "Cost",
-  "exitReached": "Exit Reached",
+  "instructionsNormal": "Select an unblocked room or junction as the starting point.",
+  "instructionsHazard": "Click nodes or corridors to simulate hazards.",
+  "routeCost": "Total Cost",
+  "exitReached": "Exit",
   "path": "Path",
   "errorStartBlocked": "Starting location blocked",
   "errorNoRoute": "No route available",
+  "expStartBlocked": "Please select a different starting location.",
+  "expNoRoute": "There is no accessible path to any open exit.",
   "statusSelectStart": "Select a starting location.",
   "nodeTypes": {
     "room": "Room",
     "junction": "Junction",
     "exit": "Exit"
   },
-  "hazardMode": "Hazard Toggle Mode",
+  "hazardMode": "Hazard Mode",
   "hazardModeOn": "On",
-  "hazardModeOff": "Off"
+  "hazardModeOff": "Off",
+  "routeFound": "Route Found"
 }
